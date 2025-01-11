@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Level Simulation with Centered Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    
+    <style>
+        /* Full page layout */
+        html, body {
+            height: 60%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Map styling */
+        #map {
+            height: 70%; 
+            width: 100%; 
+            margin: 0 auto; 
+            position: relative; 
+            bottom: 65px;
+        }
+
+    </style>
+</head>
+<body style="width: 100%;;">
+    <%- include('header.ejs') %>
+    <div id="map" style="height: 100%;"> </div>
+    <%- include('footer.ejs') %>
+    <script>
+        const southWest = L.latLng(-90, -180);
+        const northEast = L.latLng(90, 180);
+        const bounds = L.latLngBounds(southWest, northEast);
+    
+        const map = L.map('map', {
+            minZoom: 2,
+            maxZoom: 18,
+            maxBounds: bounds, // Set maximum bounds to limit map panning
+            maxBoundsViscosity: 1.0 // Prevent panning out of bounds
+        }).setView([18, 0], 2);
+    
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+    
+        const danger = "<%= danger %>"; // EJS variable embedded in the script
+        
+        // Determine the circle color based on the `danger` value
+        const circleColor = danger === "yes" ? "red" : "blue"; // Red for danger, blue otherwise
+
+        // Variables to track the current marker
+        let currentMarker = null;
+        let currentCircle = null;
+    
+        // Function to handle successful location retrieval
+        function successCallback(position) {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+    function isMobileDevice() {
+    return window.innerWidth <= 750; // Adjust the width threshold for mobile detection
+    }
+
+    // Set the view to the user's current location and zoom in
+    map.setView([latitude, longitude], 13); // Zoom level 14 is close
+
+    // Remove the previous marker and circle, if they exist
+    if (currentMarker) {
+        map.removeLayer(currentMarker);
+    }
+    if (currentCircle) {
+        map.removeLayer(currentCircle);
+    }
+
+    let currentOpacity = 0.2; // Initial opacity (fully visible)
+    let fadeDirection = -1; // Direction of fade: -1 for fading out, 1 for fading in
+
+    // Determine the circle radius based on screen size
+    const radius = isMobileDevice() ? 3000 : 4500; // Smaller radius for mobile devices
+    
+      // Add a circle to represent the user's location
+    currentCircle = L.circle([latitude, longitude], {
+        color: circleColor, // Outline color
+        fillColor:circleColor, // Fill color
+        fillOpacity: currentOpacity, // Transparency of the fill
+        radius: radius // Radius in meters
+    }).addTo(map);
+   
+
+
+    let increasing = true; // Control the direction of the fade
+
+    // Set an interval to update the opacity every 100ms
+    setInterval(() => {
+        // Update opacity
+        if (increasing) {
+            currentOpacity += 0.01; // Gradually increase opacity
+            if (currentOpacity >= 0.5) increasing = false; // Reverse direction when fully visible
+        } else {
+            currentOpacity -= 0.01; // Gradually decrease opacity
+            if (currentOpacity <= 0.2) increasing = true; // Reverse direction when fully faded
+        }
+
+        // Update the circle's style dynamically
+        if (currentCircle) {
+            currentCircle.setStyle({ fillOpacity: currentOpacity });
+        }
+    }, 50); // Update every 100ms for smooth transitions
+    // Add a new marker and update the current marker
+    currentMarker = L.marker([latitude, longitude]).addTo(map)
+        .bindPopup('You are here!')
+        .openPopup();
+        }
+    
+        // Handle error if geolocation fails
+        function errorCallback(error) {
+            alert("Unable to retrieve your location: " + error.message);
+        }
+    
+        // Request the user's location on page load
+        window.onload = function() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
+            } else {
+                alert("Geolocation is not supported by your browser.");
+            }
+        };
+       
+    </script>
+    
+</body>
+</html>
